@@ -36,6 +36,7 @@ SELECT Title
 	, Votes
 	, CONVERT(decimal(5, 2)
 	, REPLACE(REPLACE(Gross, '$',''),'M','')) GrossInM
+	, Genre
 	, Metascore
 	, Certificate
 	, Director
