@@ -4,14 +4,18 @@
 		Rating to 1 decimal.
 		Gross in a numeric data type.
 		Runtime in a numeric data type.
-		No Description column as I wont be using it for the moment.
+		Drop Description column as I wont be using it for the moment.
+		Add some useful queries like:
+			Split the Genre column.
+			Split the Runtime into Hours and Minutes.
+			Update the GrossInM so the column does not contains NULLs.
 */
 
 -- General preview of the first 25 entries of the data set.
-SELECT TOP 25 *
+SELECT *
 FROM AnimatedMovies..Animated;
 
--- Check for duplicates, in this case we do not have any exact duplicates.
+-- Check for duplicates, in this case Title is a "primary key" ,in this case we do not have any exact duplicates.
 SELECT Title, COUNT(*) duplicates
 FROM AnimatedMovies..Animated
 GROUP BY Title
@@ -30,18 +34,23 @@ FROM AnimatedMovies..Animated;
 SELECT Title, Runtime, CONVERT(int, REPLACE(Runtime, 'min','')) CleanRuntime
 FROM AnimatedMovies..Animated;
 
+-- DROP VIEW Animated_vw;
+
 CREATE VIEW Animated_vw AS
 SELECT Title
 	, CONVERT(decimal(2,1), Rating) Rating
 	, Votes
 	, CONVERT(decimal(5, 2)
 	, REPLACE(REPLACE(Gross, '$',''),'M','')) GrossInM
-	, Genre
+	, TRIM(REPLACE(SUBSTRING(Genre, 1, CHARINDEX(',', Genre)),',','')) MainCategory
+	, TRIM(RIGHT(Genre, LEN(Genre)-CHARINDEX(',', Genre))) SecondCategory
 	, Metascore
 	, Certificate
 	, Director
 	, Year
 	, CONVERT(int, REPLACE(Runtime, 'min','')) Runtime
+	, CONVERT(int, REPLACE(Runtime, 'min',''))/60 RuntimeHour
+	, CONVERT(int, REPLACE(Runtime, 'min',''))%60 RuntimeMinute
 FROM AnimatedMovies..Animated;
 
 /* 
@@ -58,8 +67,8 @@ FROM AnimatedMovies..Animated_vw;
 
 -- Update into the Certificate with a proxy value.
 UPDATE Animated_vw 
-SET Certificate = 'Unknown'
-WHERE Certificate IS NULL;
+SET Certificate = 'Not Rated'
+WHERE Certificate IN ('Unknown');
 
 -- Knowing the Average of Metascore and Gross values in case that we might fill it.
 -- Before doing that, we need to know how many values are null, in case of several values it might not be a good solution filling it out.
@@ -88,3 +97,18 @@ WHERE Metascore IS NULL;
 -- Integer division give us the Hour, for Minutes is just the remainder of the integer division.
 SELECT Runtime, Runtime/60 RuntimeHour, Runtime%60 RuntimeMinute
 FROM AnimatedMovies..Animated_vw;
+
+-- Split the Genre column into MainCategory and SecondCategory.
+SELECT TRIM(REPLACE(SUBSTRING(Genre, 1, CHARINDEX(',', Genre)),',','')) MainCategory
+	,TRIM(RIGHT(Genre, LEN(Genre)-CHARINDEX(',', Genre))) SecondCategory
+FROM AnimatedMovies..Animated_vw;
+
+-- Preview of changing categories
+WITH ChangingCategories AS(
+	SELECT MainCategory, SecondCategory
+		,CASE WHEN MainCategory IN ('') THEN SecondCategory ELSE MainCategory END MainCatCleaned
+	FROM AnimatedMovies..Animated_vw
+)
+SELECT MainCatCleaned MainCategory
+	,CASE WHEN MainCatCleaned = SecondCategory THEN '' ELSE SecondCategory END SecondCategory
+FROM ChangingCategories;
