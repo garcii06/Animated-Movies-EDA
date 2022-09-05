@@ -1,40 +1,47 @@
 /*
 	The following DEA script will try to answer the following questions and add a general panorama of the dataset.	
 	General preview and statistics from the data.
-		1. Know the total number of titles for each genre(even main or secondary).
-		2. Knowing the average gross, metascore and rating for each genre.
-		3. Does long runtime result in better rating/votes, metascore or gross?
-		4. Top 3 movies by genre in terms of gross, rating and metascore. 
+		1. Know the total number of titles for each combination of genre.
+		2. Does long runtime result in better rating/votes, metascore or gross? 
+			Tops for each movie by genre, gross, rating and metascore. 
+		3. Analysis about directors.
+			History of the movies directed. (Previous Movie)
+			Total of movies directed, total movies directed with gross registered.
+			Average Rating, metascore, gross.
+			Percentage of movies with gross register by director.
 */
 
 -- General preview of the dataset
 SELECT TOP 25 *
 FROM AnimatedMovies..Animated_vw;
 
--- Getting all the Possible Genre Categories
-WITH allCategories AS (
-	SELECT MainCategory
-	FROM AnimatedMovies..Animated_vw
-	UNION 
-	SELECT SecondCategory
-	FROM AnimatedMovies..Animated_vw
-)
-SELECT *
-FROM allCategories
-WHERE MainCategory NOT IN ('');
+-- Getting all the Possible Genre Categories as one list.
+-- There are 10 different genres.
+SELECT MainCategory
+FROM AnimatedMovies..Animated_vw
+UNION 
+SELECT SecondCategory
+FROM AnimatedMovies..Animated_vw;
 
 -- Total Movies by combination of Genre
 -- Most of the animated movies have adventure as its genre, maybe is what people look when choosing it, thats why its so popular.
+-- The most common genres are Adventure, Comedy followed by other genres like Drama and Family
 SELECT MainCategory, SecondCategory, COUNT(*) numOfMovies
 FROM AnimatedMovies..Animated_vw
 GROUP BY MainCategory, SecondCategory
-ORDER BY MainCategory;
+ORDER BY COUNT(*) DESC;
 
 -- Know how many of the movies are from the adventure genre.
 -- We have a total of 56 movies out of 85. 
 SELECT 'Adventure' Genre, COUNT(*) total_Movies
 FROM AnimatedMovies..Animated_vw
 WHERE MainCategory IN ('Adventure') OR SecondCategory IN ('Adventure');
+
+-- Know how many of the movies are from the adventure genre.
+-- We have a total of 35 movies out of 85. 
+SELECT 'Comedy' Genre, COUNT(*) total_Movies
+FROM AnimatedMovies..Animated_vw
+WHERE MainCategory IN ('Comedy') OR SecondCategory IN ('Comedy');
 
 -- Get year and total of movies produced in that year.
 SELECT  Year, COUNT(*) totalMoviesYear
@@ -181,3 +188,64 @@ GROUP BY TimeCategory;
 SELECT Top 11 Title, Metascore, Runtime, RuntimeHour
 	, DENSE_RANK() OVER (ORDER BY Metascore DESC, Runtime DESC) Ranking
 FROM AnimatedMovies..Animated_vw;
+
+-- 3. Analysis about directors.
+	-- Total of movies directed, we got a total of 55 directors, but only 15 have directed more than one movie.
+	-- Hayao is the one with the most experience, having a total of 10 movies directed.
+SELECT Director, COUNT(*) MoviesDirected
+FROM AnimatedMovies..Animated_vw
+GROUP BY Director
+ORDER BY COUNT(*) DESC;
+
+-- Here we can see that not all the movies have gross registered. 
+-- Only 8 directors have more than two movies with gross registered.
+SELECT Director, SUM(GrossInM) TotalGrossInM, COUNT(*) TotalMoviesWithGross, AVG(GrossInM) AverageGross, 
+FROM AnimatedMovies..Animated_vw
+WHERE GrossInM IS NOT NULL
+GROUP BY Director
+ORDER BY COUNT(*) DESC;
+
+-- Percentage of Directors with gross registed movies.
+WITH GrossClassification AS
+(
+SELECT Director, CASE WHEN GrossInM IS NULL THEN 0 ELSE 1 END hasGross
+FROM AnimatedMovies..Animated_vw
+)
+SELECT Director, COUNT(hasGross) totalMovies, SUM(hasGross) moviesWithGross, CONVERT(decimal(5,2), 1.0 * SUM(hasGross)/COUNT(hasGross)) * 100 pctMoviesWithGross
+FROM GrossClassification
+GROUP BY Director
+HAVING COUNT(hasGross) > 1
+ORDER BY COUNT(hasGross) DESC, 4 DESC;
+
+-- History of movies directed, previous and "actual" movie.
+SELECT Director, Year, Title, LAG(title, 1, 'None') OVER (PARTITION BY Director ORDER BY Year) PreviousMovie
+FROM AnimatedMovies..Animated_vw
+ORDER BY Director, Year;
+
+-- Rolling average and sum of Gross by each director
+	-- We can see that although Hayao has over 10 movies, most of the run low compared to others,
+	-- this can be due to different markets, different price in tickets between origin countries, etc.
+SELECT Director, SUM(GrossInM) OVER (PARTITION BY Director ORDER BY Year) RollingSumGrossInM
+	,AVG(GrossInM) OVER (PARTITION BY Director ORDER BY Year) RollingAvgGrossInM
+FROM AnimatedMovies..Animated_vw
+WHERE GrossInM IS NOT NULL;
+
+-- Ranking by Metascore
+SELECT Director, Title,  DENSE_RANK() OVER (PARTITION BY Director ORDER BY Metascore DESC) MovieRankByMetascore
+FROM AnimatedMovies..Animated_vw
+ORDER BY Director, MovieRankByMetascore;
+
+-- Average Metascore by director
+SELECT Director, Title, Year, AVG(Metascore) OVER (PARTITION BY Director ORDER BY Year) AverageMetascore
+FROM AnimatedMovies..Animated_vw
+ORDER BY Director;
+
+-- Ranking by Rating
+SELECT Director, Title,  DENSE_RANK() OVER (PARTITION BY Director ORDER BY Rating DESC) MovieRankByRating
+FROM AnimatedMovies..Animated_vw
+ORDER BY Director, MovieRankByRating;
+
+-- Average Rating by director
+SELECT Director, Title, Year, AVG(Rating) OVER (PARTITION BY Director ORDER BY Year) AverageRating
+FROM AnimatedMovies..Animated_vw
+ORDER BY Director;
