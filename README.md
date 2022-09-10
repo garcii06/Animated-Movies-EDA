@@ -1,5 +1,5 @@
-# Animated-Movies-DEA 🎞🎟🎫
-Data Exploration Analysis from an animated movies dataset. The data has a total of 85 rows with some NULLs.
+# Animated-Movies-EDA 🎞🎟🎫
+Exploratory Data Analysis from an animated movies dataset. The data has a total of 85 rows with some NULLs.
 
 ## Part 1. SQL Exploration and Analysis
 ### Data Cleaning and Transforming
