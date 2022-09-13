@@ -42,8 +42,4 @@ Talking about the Analysis, I will only recap the *interesting* things to notice
 - Most of the gross come from the States, those who are anime-Japanese or productions of the States have a lower representation and lower gross.
  - This can be due to a lower currency exchange.
  - Not taking the global gross just domestic.
- 
-## Part 2. R Plots
-Hello, this part is missing, I will try to do it ASAP.
-<!-- `-->
 
